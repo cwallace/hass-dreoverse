@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from pydreo.client import DreoClient
-from pydreo.exceptions import DreoBusinessException, DreoException
+from pydreo.cloud.client import DreoClient
+from pydreo.cloud.exceptions import DreoBusinessException, DreoException
 
 from .const import DreoEntityConfigSpec
-from .coordinator import DreoDataUpdateCoordinator
+from .coordinator import DreoDataUpdateCoordinator, _normalize_state_payload
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -124,7 +124,9 @@ async def async_setup_device_coordinator(
     if initial_state:
         _LOGGER.debug("Using initial state from device list for %s", device_id)
         try:
-            processed_data = coordinator.data_processor(initial_state, model_config)
+            processed_data = coordinator.data_processor(
+                _normalize_state_payload(initial_state), model_config
+            )
             coordinator.async_set_updated_data(processed_data)
             _LOGGER.debug("Initial state set for %s", device_id)
         except (ValueError, KeyError, TypeError) as ex:

@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from homeassistant.components.climate import HVACMode
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util.percentage import ranged_value_to_percentage
-from pydreo.exceptions import DreoException
+from pydreo.cloud.exceptions import DreoException
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from homeassistant.core import HomeAssistant
-    from pydreo.client import DreoClient
+    from pydreo.cloud.client import DreoClient
 from .const import (
     DOMAIN,
     DreoDeviceType,
@@ -64,6 +64,16 @@ def get_conf(
 ) -> Any:
     """Safely fetch a nested config value with a default."""
     return get_conf_section(model_config, section).get(key, default)
+
+
+def _normalize_state_payload(state: dict[str, Any]) -> dict[str, Any]:
+    """Return the device property mapping from known cloud response wrappers."""
+    for key in ("state", "status", "properties", "reported"):
+        value = state.get(key)
+        if isinstance(value, dict):
+            return value
+
+    return state
 
 
 class DreoGenericDeviceData:
@@ -1141,6 +1151,8 @@ class DreoDataUpdateCoordinator(DataUpdateCoordinator[DreoDeviceData | None]):
 
             if state is None:
                 _raise_no_status()
+
+            state = _normalize_state_payload(state)
 
             if self.data_processor is None:
                 _raise_no_processor()

@@ -6,7 +6,7 @@ from typing import Any
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from pydreo.exceptions import (
+from pydreo.cloud.exceptions import (
     DreoAccessDeniedException,
     DreoBusinessException,
     DreoException,

@@ -162,12 +162,12 @@ You can install this integration by adding this repository as a custom repositor
 
 2. Restart your Home Assistant instance to load the integration.
 
-**Note about dependencies**: This integration has `pydreo-cloud` library as a dependency (version 1.0.0), which is specified in the manifest.json file. When you restart Home Assistant after adding the integration (including in Docker environments), the system will automatically install the required dependencies. You do not need to manually install dependencies in most cases.
+**Note about dependencies**: This integration has `pydreo-client` library as a dependency (version 2.0.0), which is specified in the manifest.json file. When you restart Home Assistant after adding the integration (including in Docker environments), the system will automatically install the required dependencies. You do not need to manually install dependencies in most cases.
 
 If for some reason the automatic installation fails, you can manually install the dependency:
 
 ```bash
-pip install pydreo-cloud==1.0.0
+pip install pydreo-client==2.0.0
 ```
 
 ## Initial Configuration

@@ -6,8 +6,8 @@ from typing import Any
 import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from pydreo.client import DreoClient
-from pydreo.exceptions import DreoBusinessException, DreoException
+from pydreo.cloud.client import DreoClient
+from pydreo.cloud.exceptions import DreoBusinessException, DreoException
 
 from .const import DOMAIN
 
@@ -34,10 +34,10 @@ class DreoFlowHandler(ConfigFlow, domain=DOMAIN):
 
         try:
             await self.hass.async_add_executor_job(client.login)
-        except DreoException:
-            return False, "cannot_connect"
         except DreoBusinessException:
             return False, "invalid_auth"
+        except DreoException:
+            return False, "cannot_connect"
         return True, None
 
     async def async_step_user(
