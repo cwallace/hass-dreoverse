@@ -102,6 +102,7 @@ class DreoDirective(StrEnum):
     HWFPANGLE = "hwfpangle"
     RGB_BREATH_SPEED = "rgb_breath_speed"
     RGB_CYCLE_SPEED = "rgb_cycle_speed"
+    TEMP_UNIT = "tempunit"
     TEMP_UNITS = "temp_units"
 
 

@@ -14,11 +14,30 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
     from . import DreoConfigEntry
-from .const import DreoEntityConfigSpec, DreoFeatureSpec
-from .coordinator import DreoDataUpdateCoordinator, DreoDehumidifierDeviceData
+from .const import DreoDirective, DreoEntityConfigSpec, DreoFeatureSpec
+from .coordinator import (
+    DreoCirculationFanDeviceData,
+    DreoDataUpdateCoordinator,
+    DreoDehumidifierDeviceData,
+)
 from .entity import DreoEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+DREO_TEMP_UNIT_CELSIUS = 2
+
+
+def _has_configured_temperature_sensor(sensor_config: dict[str, Any]) -> bool:
+    """Return whether model config already defines a temperature sensor."""
+    for sensor_type, sensor_conf in sensor_config.items():
+        if sensor_type == DreoDirective.TEMPERATURE:
+            return True
+        if sensor_conf.get(DreoFeatureSpec.DIRECTIVE_NAME) == DreoDirective.TEMPERATURE:
+            return True
+        if sensor_conf.get(DreoFeatureSpec.STATE_ATTR_NAME) == "current_temperature":
+            return True
+
+    return False
 
 
 async def async_setup_entry(
@@ -30,7 +49,11 @@ async def async_setup_entry(
 
     @callback
     def async_add_sensor_entities() -> None:
-        sensors: list[DreoHumidityGenericSensor | DreoGenericSensor] = []
+        sensors: list[
+            DreoCirculationFanTemperatureSensor
+            | DreoHumidityGenericSensor
+            | DreoGenericSensor
+        ] = []
 
         for device in config_entry.runtime_data.devices:
             device_id = device.get("deviceSn")
@@ -47,12 +70,19 @@ async def async_setup_entry(
                 _LOGGER.error("Coordinator not found for device %s", device_id)
                 continue
 
-            if not has_sensor_support:
-                continue
-
             sensor_config = coordinator.model_config.get(
                 DreoEntityConfigSpec.SENSOR_ENTITY_CONF, {}
             )
+
+            if (
+                isinstance(coordinator.data, DreoCirculationFanDeviceData)
+                and not _has_configured_temperature_sensor(sensor_config)
+            ):
+                sensors.append(DreoCirculationFanTemperatureSensor(device, coordinator))
+
+            if not has_sensor_support:
+                continue
+
             for sensor_type, sensor_conf in sensor_config.items():
                 sensors.append(
                     DreoGenericSensor(device, coordinator, sensor_type, sensor_conf)
@@ -195,4 +225,59 @@ class DreoHumidityGenericSensor(DreoEntity, SensorEntity):
         self._attr_native_value = (
             float(data.current_humidity) if data.current_humidity is not None else None
         )
+        super()._handle_coordinator_update()
+
+
+class DreoCirculationFanTemperatureSensor(DreoEntity, SensorEntity):
+    """Ambient temperature sensor from circulation fan reported temperature."""
+
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_native_value: float | None = None
+    _attr_suggested_unit_of_measurement = None
+
+    def __init__(
+        self,
+        device: dict[str, Any],
+        coordinator: DreoDataUpdateCoordinator,
+    ) -> None:
+        """Initialize the circulation fan temperature sensor."""
+        super().__init__(device, coordinator, "temperature", "Ambient Temperature")
+        self._attr_native_unit_of_measurement = self._temperature_unit
+
+    @property
+    def _temperature_unit(self) -> UnitOfTemperature:
+        """Return device-reported unit, falling back to Home Assistant's unit."""
+        data = self.coordinator.data
+        if (
+            isinstance(data, DreoCirculationFanDeviceData)
+            and data.temperature_unit is not None
+        ):
+            return (
+                UnitOfTemperature.CELSIUS
+                if data.temperature_unit == DREO_TEMP_UNIT_CELSIUS
+                else UnitOfTemperature.FAHRENHEIT
+            )
+
+        return self.coordinator.hass.config.units.temperature_unit
+
+    def get_initial_entity_options(self) -> dict[str, Any] | None:
+        """Return initial entity options."""
+        return None
+
+    @callback
+    def _async_read_entity_options(self) -> None:
+        """Read entity options from entity registry."""
+        super()._async_read_entity_options()
+        self._sensor_option_unit_of_measurement = UNDEFINED
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        data = self.coordinator.data
+        if not isinstance(data, DreoCirculationFanDeviceData):
+            return
+
+        self._attr_available = data.available
+        self._attr_native_unit_of_measurement = self._temperature_unit
+        self._attr_native_value = data.current_temperature
         super()._handle_coordinator_update()

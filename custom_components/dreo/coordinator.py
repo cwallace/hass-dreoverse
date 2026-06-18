@@ -209,6 +209,8 @@ class DreoCirculationFanDeviceData(DreoGenericDeviceData):
     rgb_color: int | None = None
     rgb_brightness: int | None = None
     rgb_speed: str | None = None
+    current_temperature: float | None = None
+    temperature_unit: int | None = None
     model_config: dict[str, Any] | None = None
     fixed_angle: dict[str, Any] | None = None
     oscrange: dict[str, Any] | None = None
@@ -235,6 +237,8 @@ class DreoCirculationFanDeviceData(DreoGenericDeviceData):
         rgb_color: int | None = None,
         rgb_brightness: int | None = None,
         rgb_speed: str | None = None,
+        current_temperature: float | None = None,
+        temperature_unit: int | None = None,
         model_config: dict[str, Any] | None = None,
         fixed_angle: dict[str, Any] | None = None,
         oscrange: dict[str, Any] | None = None,
@@ -258,6 +262,8 @@ class DreoCirculationFanDeviceData(DreoGenericDeviceData):
         self.rgb_color = rgb_color
         self.rgb_brightness = rgb_brightness
         self.rgb_speed = rgb_speed
+        self.current_temperature = current_temperature
+        self.temperature_unit = temperature_unit
         self.model_config = model_config
         self.fixed_angle = fixed_angle
         self.oscrange = oscrange
@@ -314,6 +320,12 @@ class DreoCirculationFanDeviceData(DreoGenericDeviceData):
 
         if (rgb_speed := state.get(DreoDirective.AMBIENT_RGB_SPEED)) is not None:
             fan_data.rgb_speed = str(rgb_speed)
+
+        if (temperature := state.get(DreoDirective.TEMPERATURE)) is not None:
+            fan_data.current_temperature = float(temperature)
+
+        if (temperature_unit := state.get(DreoDirective.TEMP_UNIT)) is not None:
+            fan_data.temperature_unit = int(temperature_unit)
 
         if (light_mode := state.get(DreoDirective.LIGHTMODE)) is not None:
             fan_data.light_mode = (
